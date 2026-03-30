@@ -1,17 +1,20 @@
 package com.nimbleways.springboilerplate.services.implementations;
 
 import com.nimbleways.springboilerplate.entities.Product;
+import com.nimbleways.springboilerplate.enums.ProductType;
 import com.nimbleways.springboilerplate.repositories.ProductRepository;
+import com.nimbleways.springboilerplate.services.ProductService;
+import com.nimbleways.springboilerplate.services.handler.ProductHandler;
 import com.nimbleways.springboilerplate.utils.Annotations.UnitTest;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.util.List;
+
 
 @ExtendWith(SpringExtension.class)
 @UnitTest
@@ -19,25 +22,25 @@ public class MyUnitTests {
 
     @Mock
     private NotificationService notificationService;
+
     @Mock
     private ProductRepository productRepository;
-    @InjectMocks 
-    private ProductService productService;
+
+    @Mock
+    private ProductHandler normalHandler;
+
+    private ProductService productService; // Plus de @InjectMocks
 
     @Test
     public void test() {
-        // GIVEN
-        Product product =new Product(null, 15, 0, "NORMAL", "RJ45 Cable", null, null, null);
+        Product product = new Product(null, 15, 0, ProductType.NORMAL, "RJ45 Cable", null, null, null);
 
-        Mockito.when(productRepository.save(product)).thenReturn(product);
+        Mockito.when(normalHandler.getType()).thenReturn(ProductType.NORMAL);
 
-        // WHEN
-        productService.notifyDelay(product.getLeadTime(), product);
+        productService = new ProductService(List.of(normalHandler));
 
-        // THEN
-        assertEquals(0, product.getAvailable());
-        assertEquals(15, product.getLeadTime());
-        Mockito.verify(productRepository, Mockito.times(1)).save(product);
-        Mockito.verify(notificationService, Mockito.times(1)).sendDelayNotification(product.getLeadTime(), product.getName());
+        productService.processProduct(product);
+
+        Mockito.verify(normalHandler, Mockito.times(1)).handle(product);
     }
 }

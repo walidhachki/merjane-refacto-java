@@ -2,9 +2,11 @@ package com.nimbleways.springboilerplate.controllers;
 
 import com.nimbleways.springboilerplate.entities.Order;
 import com.nimbleways.springboilerplate.entities.Product;
+import com.nimbleways.springboilerplate.enums.ProductType;
 import com.nimbleways.springboilerplate.repositories.OrderRepository;
 import com.nimbleways.springboilerplate.repositories.ProductRepository;
 import com.nimbleways.springboilerplate.services.implementations.NotificationService;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -30,7 +32,7 @@ import java.util.Set;
 // Which allows a better performance and needs to do less mocks
 @SpringBootTest
 @AutoConfigureMockMvc
-public class MyControllerIntegrationTests {
+public class OrderControllerIntegrationTests {
         @Autowired
         private MockMvc mockMvc;
 
@@ -54,7 +56,27 @@ public class MyControllerIntegrationTests {
                                 .contentType("application/json"))
                                 .andExpect(status().isOk());
                 Order resultOrder = orderRepository.findById(order.getId()).get();
-                assertEquals(resultOrder.getId(), order.getId());
+                Assertions.assertEquals(resultOrder.getId(), order.getId());
+        }
+
+        @Test
+        void shouldHandleExpiredProduct() throws Exception {
+
+            Product p = new Product(null, 10, 5, ProductType.EXPIRABLE, "Milk",
+                    LocalDate.now().minusDays(1), null, null);
+
+            productRepository.save(p);
+
+            Order order = new Order();
+            order.setItems(Set.of(p));
+            order = orderRepository.save(order);
+
+            mockMvc.perform(post("/orders/" + order.getId() + "/processOrder"))
+                    .andExpect(status().isOk());
+
+            Product updated = productRepository.findById(p.getId()).get();
+
+            assertEquals(Integer.valueOf(0), updated.getAvailable());
         }
 
         private static Order createOrder(Set<Product> products) {
@@ -65,15 +87,17 @@ public class MyControllerIntegrationTests {
 
         private static List<Product> createProducts() {
                 List<Product> products = new ArrayList<>();
-                products.add(new Product(null, 15, 30, "NORMAL", "USB Cable", null, null, null));
-                products.add(new Product(null, 10, 0, "NORMAL", "USB Dongle", null, null, null));
-                products.add(new Product(null, 15, 30, "EXPIRABLE", "Butter", LocalDate.now().plusDays(26), null,
+                products.add(new Product(null, 15, 30, ProductType.NORMAL, "USB Cable", null, null, null));
+                products.add(new Product(null, 10, 0, ProductType.NORMAL, "USB Dongle", null, null, null));
+                products.add(new Product(null, 15, 30, ProductType.EXPIRABLE, "Butter", LocalDate.now().plusDays(26), null,
                                 null));
-                products.add(new Product(null, 90, 6, "EXPIRABLE", "Milk", LocalDate.now().minusDays(2), null, null));
-                products.add(new Product(null, 15, 30, "SEASONAL", "Watermelon", null, LocalDate.now().minusDays(2),
+                products.add(new Product(null, 90, 6, ProductType.EXPIRABLE, "Milk", LocalDate.now().minusDays(2), null, null));
+                products.add(new Product(null, 15, 30, ProductType.SEASONAL, "Watermelon", null, LocalDate.now().minusDays(2),
                                 LocalDate.now().plusDays(58)));
-                products.add(new Product(null, 15, 30, "SEASONAL", "Grapes", null, LocalDate.now().plusDays(180),
+                products.add(new Product(null, 15, 30, ProductType.SEASONAL, "Grapes", null, LocalDate.now().plusDays(180),
                                 LocalDate.now().plusDays(240)));
                 return products;
         }
+
+
 }
